@@ -1,27 +1,27 @@
-FROM node:20-alpine AS builder
-
+# Etapa 1: Build
+FROM node:18-alpine AS build
 WORKDIR /app
 
-# Copia apenas os manifests para otimizar cache
+# Copia dependências e instala
 COPY package*.json ./
 
-# Instala dependências ignorando conflitos de peer deps
-RUN npm install --legacy-peer-deps
+# Instala TODAS as dependências (incluindo dev)
+RUN npm install
 
-# Copia todo o restante do projeto
+# Copia o restante dos arquivos
 COPY . .
 
-# Build da aplicação
-RUN npm run build
+# ⚙️ Corrige permissões e executa build
+RUN chmod +x ./node_modules/.bin/vite
+RUN npx vite build
 
-# --- Etapa de produção ---
-FROM node:20-alpine AS runner
+# Etapa 2: Servidor Nginx
+FROM nginx:stable-alpine
+COPY --from=build /app/build /usr/share/nginx/html
 
-WORKDIR /app
 
-COPY --from=builder /app/dist ./dist
-COPY package*.json ./
+# Configuração opcional (para rotas SPA)
+# RUN sed -i 's/listen 80;/listen ${PORT:-80};/' /etc/nginx/conf.d/default.conf
 
-RUN npm install --production --legacy-peer-deps
-
-CMD ["node", "dist/server.js"]
+EXPOSE ${PORT:-80}
+CMD ["nginx", "-g", "daemon off;"]
