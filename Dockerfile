@@ -1,33 +1,25 @@
-# ===========================
 # Etapa 1: Build da aplicação
-# ===========================
-FROM node:20-alpine AS builder
-
+FROM node:18-alpine AS build
 WORKDIR /app
 
+# Instala dependências
 COPY package*.json ./
-RUN npm install --legacy-peer-deps
+RUN npm install
 
+# Copia o projeto
 COPY . .
+
+# Build
 RUN npm run build
 
-# ===========================
-# Etapa 2: Executar o servidor de produção
-# ===========================
-FROM node:20-alpine AS runner
+# Etapa 2: Servir com Nginx
+FROM nginx:stable-alpine
 
-WORKDIR /app
+# Copia build correto (dist)
+COPY --from=build /app/dist /usr/share/nginx/html
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/next.config.mjs ./next.config.mjs
+# Garante que o Nginx servirá SPA (react-router, etc)
+RUN sed -i 's/try_files $uri $uri\/ =404;/try_files $uri \/index.html;/' /etc/nginx/conf.d/default.conf
 
-ENV NODE_ENV=production
-ENV PORT=3000
-
-EXPOSE ${PORT}
-
-# 💡 Usa shell form para interpolar ${PORT}
-CMD sh -c "npx next start -p ${PORT}"
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
