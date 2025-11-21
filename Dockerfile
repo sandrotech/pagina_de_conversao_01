@@ -7,17 +7,17 @@ RUN npm install
 
 COPY . .
 
-# Corrige permissões dos binários (Vite, SWC, etc)
+# Vite e esbuild às vezes ficam sem permissão no Alpine
 RUN chmod -R +x node_modules/.bin
 
-# Build da aplicação
+# Build - seu Vite gera /build (como confirmado no log)
 RUN npm run build
 
 # Etapa 2: Servir com Nginx
 FROM nginx:stable-alpine
 
-# Copia a pasta dist gerada pelo Vite
-COPY --from=build /app/dist /usr/share/nginx/html
+# Copia a pasta build gerada pelo Vite
+COPY --from=build /app/build /usr/share/nginx/html
 
 # SPA fallback
 RUN sed -i 's/try_files $uri $uri\/ =404;/try_files $uri \/index.html;/' /etc/nginx/conf.d/default.conf
