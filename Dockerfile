@@ -8,5 +8,5 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV PORT=3000
-COPY --from=builder /app/dist /app/dist
-CMD ["sh", "-c", "npx serve -s dist -l ${PORT}"]
+COPY --from=builder /app/build /app/build
+CMD ["sh", "-c", "npx --yes serve -s build -l ${PORT}"]
